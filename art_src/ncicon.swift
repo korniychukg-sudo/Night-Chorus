@@ -1,13 +1,14 @@
 import Foundation
 import CoreGraphics
 
-let moonBeam = Wash(r: 0.878, g: 0.925, b: 1.000)
-let pitch = Wash(r: 0.024, g: 0.031, b: 0.047)
+let moonBeam = Wash(r: 0.886, g: 0.929, b: 1.000)
+let warmLit = Wash(r: 0.980, g: 0.886, b: 0.686)
+let pitch = Wash(r: 0.020, g: 0.027, b: 0.043)
 
 func litBy(_ base: Wash, _ level: Double) -> Wash {
     let k = max(0.0, min(1.0, level))
-    if k >= 0.50 { return base.mix(moonBeam, (k - 0.50) * 1.30) }
-    return base.mix(pitch, (0.50 - k) * 1.72)
+    if k >= 0.50 { return base.mix(warmLit, (k - 0.50) * 1.30) }
+    return base.mix(pitch, (0.50 - k) * 1.94)
 }
 
 func curveThrough(_ control: [CGPoint], closed: Bool, steps: Int) -> [CGPoint] {
@@ -49,25 +50,27 @@ func rimRuns(_ pts: [CGPoint], light: Double, threshold: Double = 0.14) -> [[CGP
     var kept: [Int] = []
     for i in 0..<pts.count {
         let a = pts[i], b = pts[(i + 1) % pts.count]
-        let ang = atan2(Double(b.y - a.y), Double(b.x - a.x))
+        let dx = Double(b.x - a.x), dy = Double(b.y - a.y)
+        guard dx * dx + dy * dy > 0.0001 else { continue }
+        let ang = atan2(dy, dx)
         if cos(ang + turn - light) > threshold { kept.append(i) }
     }
     guard !kept.isEmpty else { return [] }
-    var runs: [[CGPoint]] = []
-    var current: [CGPoint] = []
+    var spans: [[Int]] = []
+    var current: [Int] = []
     var previous = -99
     for i in kept {
-        if i == previous + 1 || current.isEmpty { current.append(pts[i]) }
-        else { if current.count > 1 { runs.append(current) }; current = [pts[i]] }
+        if current.isEmpty || i == previous + 1 { current.append(i) }
+        else { spans.append(current); current = [i] }
         previous = i
     }
-    if current.count > 1 { runs.append(current) }
-    if let first = kept.first, let last = kept.last,
-       first == 0, last == pts.count - 1, runs.count > 1 {
-        let tail = runs.removeLast()
-        runs[0] = tail + runs[0]
+    if !current.isEmpty { spans.append(current) }
+    if spans.count > 1, spans[0].first == 0,
+       spans[spans.count - 1].last == pts.count - 1 {
+        let tail = spans.removeLast()
+        spans[0] = tail + spans[0]
     }
-    return runs
+    return spans.filter { $0.count > 1 }.map { span in span.map { pts[$0] } }
 }
 
 func sculpt(_ p: Sheet, _ outline: [CGPoint], base: Wash, light: Double,
@@ -117,8 +120,8 @@ func sculpt(_ p: Sheet, _ outline: [CGPoint], base: Wash, light: Double,
                 pen(p, [pt(x, y), pt(x + cos(dir) * grainLen * g.r(0.4, 1.5),
                                      y + sin(dir) * grainLen * g.r(0.3, 1.1))],
                     weight: g.r(grainWeight * 0.35, grainWeight),
-                    colour: (dark ? base.mix(pitch, g.r(0.20, 0.58))
-                             : base.mix(moonBeam, g.r(0.08, 0.34))).al(g.r(0.14, 0.44)),
+                    colour: (dark ? base.mix(pitch, g.r(0.20, 0.62))
+                             : base.mix(warmLit, g.r(0.08, 0.40))).al(g.r(0.14, 0.46)),
                     wobble: 0.4, taper: true, seed: g.next())
             }
         }
@@ -165,16 +168,16 @@ func formPass(_ p: Sheet, _ outline: [CGPoint], light: Double, inset: Double,
     let dark = crescent(outline, light: light, inset: inset, away: true)
     if dark.count > 3 {
         p.inside(form) {
-            p.shape(dark, shade.al(0.34))
+            p.shape(dark, shade.al(0.27))
             let tighter = crescent(outline, light: light, inset: inset * 0.52, away: true)
-            if tighter.count > 3 { p.shape(tighter, shade.al(0.40)) }
-            crossHatch(p, pathOf(dark), depth: 2, spacing: max(3.0, inset * 0.09),
-                       colour: shade.al(0.42), bound: form, seed: seed)
+            if tighter.count > 3 { p.shape(tighter, shade.al(0.31)) }
+            crossHatch(p, pathOf(dark), depth: 1, spacing: max(3.0, inset * 0.045),
+                       colour: shade.al(0.20), bound: form, seed: seed)
         }
     }
-    let lit = crescent(outline, light: light, inset: inset * 0.42, away: false)
+    let lit = crescent(outline, light: light, inset: inset * 0.40, away: false)
     if lit.count > 3 {
-        p.inside(form) { p.shape(lit, glow.al(0.20)) }
+        p.inside(form) { p.shape(lit, glow.al(0.22)) }
     }
 }
 
@@ -188,273 +191,490 @@ func engrave(_ p: Sheet, _ line: [CGPoint], weight: Double, light: Double, seed:
               colour: moonBeam.al(glow), pieces: 5, gap: 0.09, wobble: 0.7, seed: seed &+ 17)
 }
 
+func softGlow(_ p: Sheet, cx: Double, cy: Double, radius: Double,
+              colour: Wash, strength: Double, bias: Double = 0.0) {
+    guard radius > 1, let g = CGGradient(
+        colorsSpace: rgbSpace,
+        colors: [cg(colour.al(strength)), cg(colour.al(strength * 0.34)),
+                 cg(colour.al(0))] as CFArray,
+        locations: [0, CGFloat(0.44 + bias), 1]) else { return }
+    p.ctx.drawRadialGradient(g, startCenter: CGPoint(x: cx, y: cy), startRadius: 0,
+                             endCenter: CGPoint(x: cx, y: cy),
+                             endRadius: CGFloat(radius), options: [])
+}
+
+func featherFan(_ p: Sheet, cx: Double, cy: Double, rx: Double, ry: Double,
+                count: Int, lengthMin: Double, lengthMax: Double, light: Double,
+                dark: Wash, pale: Wash, seed: UInt64) {
+    var rng = Spark(seed)
+    for _ in 0..<count {
+        let a = rng.r(0, 6.283185)
+        let t = pow(rng.d(), 0.62)
+        let x = cx + cos(a) * rx * t
+        let y = cy + sin(a) * ry * t
+        let out = atan2((y - cy) / max(1.0, ry * 0.62), (x - cx) / max(1.0, rx * 0.62))
+        let fade = max(0.0, 1.0 - pow(t, 2.6))
+        let axis = ((x - cx) / rx) * cos(light) + ((y - cy) / ry) * sin(light)
+        let sun = max(0.0, min(1.0, 0.5 + 0.74 * axis))
+        let len = rng.r(lengthMin, lengthMax) * (0.48 + 0.86 * t)
+        let bend = rng.r(-0.20, 0.20)
+        let shade = rng.odds(0.05 + 0.80 * sun)
+            ? pale.al(rng.r(0.05, 0.30) * fade * (0.16 + 0.94 * sun))
+            : dark.al(rng.r(0.10, 0.48) * fade * (0.52 + 0.78 * (1.0 - sun)))
+        pen(p, [pt(x, y),
+                pt(x + cos(out + bend * 0.3) * len * 0.52,
+                   y + sin(out + bend * 0.3) * len * 0.52),
+                pt(x + cos(out + bend) * len, y + sin(out + bend) * len)],
+            weight: rng.r(0.9, 2.7), colour: shade, wobble: 0.34, taper: true,
+            seed: rng.next())
+    }
+}
+
+func owlEye(_ p: Sheet, cx: Double, cy: Double, rad: Double, light: Double,
+            value: Double, gaze: Double, jitter: UInt64) {
+    softGlow(p, cx: cx, cy: cy + rad * 0.08, radius: rad * 2.30,
+             colour: Wash(r: 0.055, g: 0.043, b: 0.035), strength: 0.80, bias: 0.14)
+    p.shape(lump(cx: cx, cy: cy + rad * 0.02, rx: rad * 1.15, ry: rad * 1.20,
+                 rough: 0.105, steps: 38, seed: 8801),
+            Wash(r: 0.055, g: 0.043, b: 0.035).al(0.40))
+
+    var ring = Spark(jitter &+ 11)
+    for _ in 0..<280 {
+        let a = ring.r(0, 6.283185)
+        let r0 = rad * ring.r(1.16, 1.50)
+        let len = rad * ring.r(0.18, 0.58)
+        let lam = max(0.0, cos(a - light))
+        pen(p, [pt(cx + cos(a) * r0 * 1.04, cy + sin(a) * r0),
+                pt(cx + cos(a) * (r0 + len) * 1.04, cy + sin(a) * (r0 + len))],
+            weight: ring.r(0.8, 2.5),
+            colour: (ring.odds(0.20 + 0.56 * lam) ? moonBeam : pitch)
+                .al(ring.r(0.10, 0.38) * (0.30 + 0.80 * value)),
+            wobble: 0.3, taper: true, seed: ring.next())
+    }
+
+    let opening = lump(cx: cx, cy: cy, rx: rad, ry: rad * 0.96,
+                       rough: 0.030, steps: 44, seed: 8811)
+    let amber = Wash(r: 0.988, g: 0.769, b: 0.129).mix(pitch, 1.0 - value)
+    sculpt(p, opening, base: amber, light: light, hotAt: 0.84, seed: 8813,
+           bands: 48, grain: false, falloff: 1.70, ceiling: 0.62, floorLevel: 0.40,
+           rim: false)
+
+    var fibre = Spark(jitter &+ 29)
+    p.inside(pathOf(opening)) {
+        for _ in 0..<260 {
+            let a = fibre.r(0, 6.283185)
+            let warm = fibre.odds(0.5)
+            pen(p, [pt(cx + cos(a) * rad * 0.30, cy + sin(a) * rad * 0.30),
+                    pt(cx + cos(a) * rad * 1.02, cy + sin(a) * rad * 1.02)],
+                weight: fibre.r(0.8, 2.3),
+                colour: (warm ? Wash(r: 0.529, g: 0.361, b: 0.043).mix(pitch, 1.0 - value)
+                         : Wash(r: 1.0, g: 0.949, b: 0.667).mix(pitch, 1.0 - value))
+                    .al(fibre.r(0.14, 0.48) * (0.42 + 0.62 * value)),
+                wobble: 0.28, taper: true, seed: fibre.next())
+        }
+    }
+
+    let limbal = ringPts(cx: cx, cy: cy, rx: rad * 0.93, ry: rad * 0.89, steps: 52)
+    pen(p, limbal + [limbal[0]], weight: rad * 0.17,
+        colour: Wash(r: 0.204, g: 0.129, b: 0.031).mix(pitch, 1.0 - value).al(0.56),
+        wobble: 0.6, taper: false, seed: 8821)
+    let rimEdge = ringPts(cx: cx, cy: cy, rx: rad * 1.02, ry: rad * 0.98, steps: 56)
+    pen(p, rimEdge + [rimEdge[0]], weight: rad * 0.09,
+        colour: Wash(r: 0.043, g: 0.031, b: 0.024).al(0.70), wobble: 0.9,
+        taper: false, seed: 8823)
+
+    p.shape(lump(cx: cx + gaze, cy: cy + rad * 0.04, rx: rad * 0.35, ry: rad * 0.36,
+                 rough: 0.038, steps: 30, seed: 8831),
+            Wash(r: 0.020, g: 0.016, b: 0.012))
+
+    var lid: [CGPoint] = []
+    var a = 3.24
+    while a <= 6.16 {
+        lid.append(pt(cx + cos(a) * rad * 1.03, cy + sin(a) * rad * 0.99))
+        a += 0.10
+    }
+    var back: [CGPoint] = []
+    a = 6.16
+    while a >= 3.24 {
+        back.append(pt(cx + cos(a) * rad * 0.99, cy + sin(a) * rad * 0.97 + rad * 0.26))
+        a -= 0.10
+    }
+    p.shape(lid + back, Wash(r: 0.063, g: 0.047, b: 0.039).al(0.42 + 0.30 * (1.0 - value)))
+
+    p.shape(lump(cx: cx + gaze - rad * 0.19, cy: cy - rad * 0.17,
+                 rx: rad * 0.14, ry: rad * 0.12, rough: 0.06, steps: 22, seed: 8841),
+            Wash(r: 1.0, g: 1.0, b: 0.988).al(0.26 + 0.68 * value))
+    p.shape(lump(cx: cx + gaze + rad * 0.17, cy: cy + rad * 0.19,
+                 rx: rad * 0.07, ry: rad * 0.06, rough: 0.05, steps: 16, seed: 8843),
+            moonBeam.al(0.10 + 0.34 * value))
+}
 
 func buildIcon(dir: String) {
     let held = sheetScale
     sheetScale = 1.0
     let p = Sheet(1024, 1024)
-    p.floodAll(Wash(r: 0.027, g: 0.035, b: 0.055))
+    p.floodAll(Wash(r: 0.012, g: 0.016, b: 0.031))
     p.flipTopDown()
-    let light = 3.90
+    let light = 3.80
     p.light = light
 
     if let g = CGGradient(colorsSpace: rgbSpace,
-                          colors: [cg(Wash(r: 0.235, g: 0.282, b: 0.404)),
-                                   cg(Wash(r: 0.075, g: 0.094, b: 0.161)),
-                                   cg(Wash(r: 0.012, g: 0.016, b: 0.031))] as CFArray,
-                          locations: [0, 0.40, 1]) {
-        p.ctx.drawRadialGradient(g, startCenter: CGPoint(x: 150, y: 110), startRadius: 0,
-                                 endCenter: CGPoint(x: 330, y: 380), endRadius: 1010,
+                          colors: [cg(Wash(r: 0.157, g: 0.200, b: 0.310)),
+                                   cg(Wash(r: 0.063, g: 0.086, b: 0.153)),
+                                   cg(Wash(r: 0.016, g: 0.024, b: 0.047)),
+                                   cg(Wash(r: 0.002, g: 0.004, b: 0.010))] as CFArray,
+                          locations: [0, 0.18, 0.50, 1]) {
+        p.ctx.drawRadialGradient(g, startCenter: CGPoint(x: 40, y: 20), startRadius: 0,
+                                 endCenter: CGPoint(x: 40, y: 20), endRadius: 1180,
                                  options: [.drawsAfterEndLocation])
     }
 
-    var rng = Spark(hashSeed("night-chorus-owl-2"))
-    for _ in 0..<3000 {
-        p.dot(rng.d() * 1024, rng.d() * 1024, rng.r(0.5, 2.0),
-              Wash(r: 0.898, g: 0.933, b: 1.0).al(rng.r(0.004, 0.036)))
+    var rng = Spark(hashSeed("night-chorus-horned-owl"))
+    for _ in 0..<3400 {
+        let x = rng.d() * 1024, y = rng.d() * 1024
+        let far = min(1.0, ((x - 76) * (x - 76) + (y - 48) * (y - 48)).squareRoot() / 1100)
+        p.dot(x, y, rng.r(0.5, 2.1),
+              Wash(r: 0.906, g: 0.937, b: 1.0).al(rng.r(0.006, 0.052) * (0.35 + far)))
     }
 
     func limb(_ control: [CGPoint], thick: Double, seed: UInt64, tone: Wash) {
-        let spine = resample(curveThrough(control, closed: false, steps: 12), count: 110)
+        let spine = resample(curveThrough(control, closed: false, steps: 12), count: 120)
         var upper: [CGPoint] = []
         var lower: [CGPoint] = []
         var wob = Spark(seed)
         for (i, q) in spine.enumerated() {
             let t = Double(i) / Double(spine.count - 1)
-            let w = thick * (1.0 - t * 0.62) * (0.90 + 0.16 * sin(t * 13 + 1.2)) + wob.r(-1.6, 1.6)
-            upper.append(pt(Double(q.x) - w * 0.30, Double(q.y) - w))
-            lower.append(pt(Double(q.x) + w * 0.30, Double(q.y) + w))
+            let w = thick * (1.0 - t * 0.58) * (0.90 + 0.16 * sin(t * 13 + 1.2)) + wob.r(-1.8, 1.8)
+            upper.append(pt(Double(q.x) - w, Double(q.y) - w * 0.34))
+            lower.append(pt(Double(q.x) + w, Double(q.y) + w * 0.34))
         }
         let form = upper + lower.reversed()
-        sculpt(p, form, base: tone, light: light, hotAt: 0.86, seed: seed &+ 3,
-               bands: 52, grainCount: 320, grainLen: 44, grainWeight: 2.4,
-               falloff: 3.10, ceiling: 0.62)
-        formPass(p, form, light: light, inset: thick * 1.05,
+        sculpt(p, form, base: tone, light: light, hotAt: 0.88, seed: seed &+ 3,
+               bands: 54, grainCount: 380, grainLen: 46, grainWeight: 2.4,
+               falloff: 3.20, ceiling: 0.60, floorLevel: 0.03)
+        formPass(p, form, light: light, inset: thick * 1.10,
                  shade: pitch, glow: moonBeam, seed: seed &+ 9)
     }
 
-    limb([pt(1090, 214), pt(884, 268), pt(686, 344), pt(470, 452), pt(232, 596), pt(-90, 742)],
-         thick: 34, seed: 4101, tone: Wash(r: 0.243, g: 0.220, b: 0.204))
-    limb([pt(742, 322), pt(806, 218), pt(858, 118), pt(884, -70)],
-         thick: 15, seed: 4131, tone: Wash(r: 0.204, g: 0.184, b: 0.176))
-    limb([pt(430, 468), pt(486, 392), pt(520, 292), pt(516, 170)],
-         thick: 12, seed: 4141, tone: Wash(r: 0.192, g: 0.176, b: 0.169))
-    limb([pt(1090, 508), pt(930, 560), pt(806, 640), pt(724, 754)],
-         thick: 19, seed: 4151, tone: Wash(r: 0.216, g: 0.196, b: 0.188))
+    limb([pt(946, 1180), pt(930, 960), pt(902, 700), pt(884, 430),
+          pt(872, 180), pt(866, -140)],
+         thick: 44, seed: 4101, tone: Wash(r: 0.129, g: 0.114, b: 0.102))
+    limb([pt(900, 640), pt(1000, 560), pt(1096, 522), pt(1220, 508)],
+         thick: 19, seed: 4131, tone: Wash(r: 0.114, g: 0.102, b: 0.094))
+    limb([pt(878, 300), pt(966, 226), pt(1064, 190), pt(1200, 172)],
+         thick: 15, seed: 4141, tone: Wash(r: 0.110, g: 0.098, b: 0.090))
+    limb([pt(884, 402), pt(796, 372), pt(716, 386), pt(646, 428)],
+         thick: 13, seed: 4151, tone: Wash(r: 0.102, g: 0.094, b: 0.086))
 
     let control: [CGPoint] = [
-        pt(-124, -96), pt(28, -96),
-        pt(126, 128), pt(214, 196), pt(336, 176), pt(452, 190), pt(524, 118),
-        pt(606, -96), pt(714, -96),
-        pt(738, 158), pt(778, 336), pt(788, 486),
-        pt(756, 632), pt(684, 742), pt(614, 812),
-        pt(596, 866), pt(676, 906), pt(792, 950),
-        pt(902, 1004), pt(1010, 1076), pt(1124, 1124),
-        pt(-124, 1124), pt(-124, 902), pt(-116, 700), pt(-122, 472), pt(-130, 236)
+        pt(-210, 1210), pt(-206, 1000), pt(-150, 848), pt(-40, 748),
+        pt(74, 682), pt(160, 646), pt(190, 618),
+        pt(152, 528), pt(128, 420), pt(154, 330),
+        pt(196, 262),
+        pt(44, 0), pt(-60, -184), pt(110, -232),
+        pt(262, 0), pt(400, 210),
+        pt(474, 250),
+        pt(556, 208), pt(672, 0),
+        pt(800, -232), pt(960, -184),
+        pt(853, 0), pt(700, 258),
+        pt(748, 312), pt(776, 414), pt(762, 548), pt(706, 660),
+        pt(676, 766),
+        pt(730, 792), pt(866, 848), pt(1014, 920), pt(1170, 1010),
+        pt(1240, 1210)
     ]
     let bird = curveThrough(control, closed: true, steps: 9)
+    let birdPath = pathOf(bird)
 
-    let castPool = lump(cx: 470, cy: 946, rx: 470, ry: 78, rough: 0.14, steps: 32, seed: 4201)
-    p.shape(castPool, Wash(r: 0.006, g: 0.010, b: 0.020).al(0.80))
+    let headControl: [CGPoint] = [
+        pt(196, 610), pt(158, 520), pt(130, 418), pt(154, 330),
+        pt(216, 270), pt(312, 238), pt(432, 228), pt(556, 238),
+        pt(664, 266), pt(742, 330), pt(778, 430), pt(760, 556),
+        pt(700, 672), pt(586, 742), pt(444, 770), pt(310, 726)
+    ]
+    let headCurve = curveThrough(headControl, closed: true, steps: 10)
 
-    sculpt(p, bird, base: Wash(r: 0.412, g: 0.341, b: 0.271), light: light,
-           hotAt: 0.94, seed: 5001, bands: 108, grainCount: 7200, grainLen: 19,
-           grainWeight: 1.9, falloff: 3.40, ceiling: 0.70)
-    formPass(p, bird, light: light, inset: 300, shade: pitch,
-             glow: Wash(r: 0.804, g: 0.867, b: 0.980), seed: 5011)
+    let jawControl: [CGPoint] = [
+        pt(778, 430), pt(760, 562), pt(702, 678), pt(590, 750), pt(446, 778),
+        pt(310, 734), pt(226, 654), pt(166, 530), pt(142, 418),
+        pt(-360, 418), pt(-360, 1280), pt(1400, 1280), pt(1400, 430)
+    ]
+    let underHead = curveThrough(jawControl, closed: true, steps: 8)
+
+    var halo = Spark(4301)
+    for k in 0..<7 {
+        let spread = 26.0 + Double(k) * 24.0
+        let ghost = bird.map { q -> CGPoint in
+            pt(Double(q.x) + spread * 0.52 + halo.r(-4, 4),
+               Double(q.y) + spread * 0.56 + halo.r(-4, 4))
+        }
+        p.shape(ghost, Wash(r: 0.004, g: 0.006, b: 0.014).al(0.16))
+    }
+
+    sculpt(p, bird, base: Wash(r: 0.522, g: 0.373, b: 0.220), light: light,
+           hotAt: 0.85, seed: 5001, bands: 118, grainCount: 9200, grainLen: 20,
+           grainWeight: 1.9, falloff: 4.05, ceiling: 0.94, floorLevel: 0.08,
+           rim: false)
+    formPass(p, bird, light: light, inset: 460, shade: pitch,
+             glow: Wash(r: 0.812, g: 0.875, b: 0.984), seed: 5011)
+
+    p.inside(birdPath) {
+        softGlow(p, cx: 236, cy: 292, radius: 430,
+                 colour: Wash(r: 0.855, g: 0.812, b: 0.729), strength: 0.16)
+        softGlow(p, cx: 906, cy: 830, radius: 760,
+                 colour: Wash(r: 0.004, g: 0.008, b: 0.020), strength: 0.54, bias: 0.10)
+        softGlow(p, cx: 420, cy: 1090, radius: 600,
+                 colour: Wash(r: 0.004, g: 0.008, b: 0.020), strength: 0.62)
+        softGlow(p, cx: 20, cy: 980, radius: 560,
+                 colour: Wash(r: 0.006, g: 0.010, b: 0.024), strength: 0.42)
+        softGlow(p, cx: 880, cy: 462, radius: 500,
+                 colour: Wash(r: 0.004, g: 0.008, b: 0.020), strength: 0.48)
+    }
 
     var scale = Spark(5101)
-    p.inside(pathOf(bird)) {
-        for _ in 0..<900 {
-            let x = scale.r(-120, 1120), y = scale.r(-90, 1120)
-            let rad = scale.r(14, 46)
-            let a0 = light + .pi * 0.35
+    p.inside(birdPath) {
+        for _ in 0..<960 {
+            let x = scale.r(-140, 1200)
+            let y = scale.r(690, 1160)
+            let rad = scale.r(18, 58)
+            let a0 = light + .pi * 0.34
             var arc: [CGPoint] = []
             for k in 0...9 {
                 let a = a0 + Double(k) / 9.0 * 2.3
-                arc.append(pt(x + cos(a) * rad, y + sin(a) * rad * 0.72))
+                arc.append(pt(x + cos(a) * rad, y + sin(a) * rad * 0.70))
             }
-            pen(p, arc, weight: scale.r(1.1, 3.0),
-                colour: (scale.odds(0.62) ? pitch : moonBeam).al(scale.r(0.04, 0.13)),
+            pen(p, arc, weight: scale.r(1.2, 3.2),
+                colour: (scale.odds(0.60) ? pitch : moonBeam).al(scale.r(0.05, 0.16)),
                 wobble: 0.5, taper: true, seed: scale.next())
         }
     }
 
-    let faceControl: [CGPoint] = [
-        pt(206, 262), pt(318, 232), pt(430, 262), pt(508, 344),
-        pt(552, 452), pt(546, 566), pt(496, 668), pt(400, 742),
-        pt(288, 756), pt(184, 700), pt(126, 574), pt(114, 410)
-    ]
-    let facialDisc = curveThrough(faceControl, closed: true, steps: 10)
-    sculpt(p, facialDisc, base: Wash(r: 0.541, g: 0.427, b: 0.322), light: light,
-           hotAt: 0.90, seed: 5201, bands: 78, grainCount: 2600, grainLen: 15,
-           grainWeight: 1.6, falloff: 3.20, ceiling: 0.72, rim: false)
-    formPass(p, facialDisc, light: light, inset: 176, shade: pitch,
-             glow: Wash(r: 0.847, g: 0.898, b: 0.988), seed: 5211)
-    engrave(p, facialDisc + [facialDisc[0]], weight: 6.4, light: light, seed: 5301, glow: 0.16)
-    p.inside(pathOf(facialDisc)) {
-        let far = crescent(facialDisc, light: light, inset: 260, away: true)
-        if far.count > 3 { p.shape(far, pitch.al(0.30)) }
-    }
-
-    var fan = Spark(5321)
-    let discPath = pathOf(facialDisc)
-    p.inside(discPath) {
-        for _ in 0..<1600 {
-            let ang = fan.r(0, 6.283)
-            let rad = fan.r(30, 240)
-            let cx = 330.0 + cos(ang) * rad * 0.92
-            let cy = 500.0 + sin(ang) * rad
-            let out = atan2(cy - 500, cx - 330)
-            let len = fan.r(16, 44)
-            pen(p, [pt(cx, cy), pt(cx + cos(out) * len, cy + sin(out) * len)],
-                weight: fan.r(0.9, 2.4),
-                colour: (fan.odds(0.52) ? pitch : moonBeam).al(fan.r(0.08, 0.26)),
-                wobble: 0.4, taper: true, seed: fan.next())
+    var bar = Spark(6001)
+    p.inside(birdPath) {
+        for k in 0..<24 {
+            let y = 828.0 + Double(k) * 26.0
+            let sweep = curveThrough([pt(-160 + bar.r(-40, 40), y - 40),
+                                      pt(180, y + bar.r(0, 26)),
+                                      pt(520, y + bar.r(18, 52)),
+                                      pt(860, y + bar.r(36, 84)),
+                                      pt(1200, y + bar.r(56, 116))], closed: false, steps: 9)
+            penBroken(p, sweep, weight: bar.r(6.0, 13.0),
+                      colour: pitch.al(bar.r(0.34, 0.66)), pieces: 3, gap: 0.10,
+                      wobble: 1.9, seed: 6100 &+ UInt64(k))
+            penBroken(p, sweep.map { pt(Double($0.x) - 9, Double($0.y) - 11) },
+                      weight: bar.r(2.4, 5.4), colour: moonBeam.al(bar.r(0.10, 0.30)),
+                      pieces: 3, gap: 0.12, wobble: 1.4, seed: 6200 &+ UInt64(k))
         }
     }
-
-    let browLeft = curveThrough([pt(128, 372), pt(196, 306), pt(286, 302), pt(330, 372)],
-                                closed: false, steps: 11)
-    engrave(p, browLeft, weight: 8.0, light: light, seed: 5311)
-    let browRight = curveThrough([pt(330, 372), pt(388, 306), pt(468, 314), pt(516, 384)],
-                                 closed: false, steps: 11)
-    engrave(p, browRight, weight: 6.4, light: light, seed: 5313)
-    engrave(p, curveThrough([pt(330, 366), pt(336, 452), pt(340, 528)], closed: false, steps: 10),
-            weight: 5.0, light: light, seed: 5315)
-    engrave(p, curveThrough([pt(140, 540), pt(206, 656), pt(310, 716), pt(414, 706)],
-                            closed: false, steps: 11), weight: 5.0, light: light, seed: 5317)
-
-    let socketNear = lump(cx: 242, cy: 452, rx: 96, ry: 88, rough: 0.045, steps: 34, seed: 5401)
-    sculpt(p, socketNear, base: Wash(r: 0.145, g: 0.118, b: 0.098), light: light,
-           hotAt: 0.24, seed: 5403, bands: 40, grain: false, falloff: 3.0,
-           ceiling: 0.46, rim: false)
-    let irisNear = curveThrough([pt(158, 450), pt(240, 372), pt(324, 452), pt(240, 532)],
-                                closed: true, steps: 14)
-    sculpt(p, irisNear, base: Wash(r: 0.867, g: 0.667, b: 0.176), light: light,
-           hotAt: 0.86, seed: 5405, bands: 52, grain: false, falloff: 2.6, ceiling: 0.68)
-    var iris = Spark(5406)
-    p.inside(pathOf(irisNear)) {
-        for _ in 0..<220 {
-            let a = iris.r(0, 6.283)
-            pen(p, [pt(240 + cos(a) * 24, 452 + sin(a) * 24),
-                    pt(240 + cos(a) * 74, 452 + sin(a) * 74)],
-                weight: iris.r(0.8, 2.2),
-                colour: (iris.odds(0.5) ? Wash(r: 0.404, g: 0.278, b: 0.043)
-                         : Wash(r: 0.988, g: 0.906, b: 0.529)).al(iris.r(0.14, 0.40)),
-                wobble: 0.3, taper: true, seed: iris.next())
-        }
-    }
-    p.shape(lump(cx: 240, cy: 452, rx: 27, ry: 28, rough: 0.04, steps: 26, seed: 5407),
-            Wash(r: 0.027, g: 0.022, b: 0.016))
-    p.shape(lump(cx: 216, cy: 428, rx: 15, ry: 12, rough: 0.06, steps: 22, seed: 5409),
-            Wash(r: 0.988, g: 0.996, b: 1.0).al(0.96))
-    p.shape(lump(cx: 262, cy: 480, rx: 7, ry: 6, rough: 0.05, steps: 16, seed: 5411),
-            moonBeam.al(0.44))
-
-    let socketFar = lump(cx: 470, cy: 468, rx: 62, ry: 60, rough: 0.05, steps: 30, seed: 5501)
-    sculpt(p, socketFar, base: Wash(r: 0.086, g: 0.071, b: 0.063), light: light,
-           hotAt: 0.18, seed: 5503, bands: 30, grain: false, falloff: 2.8,
-           ceiling: 0.34, rim: false)
-    let irisFar = curveThrough([pt(420, 468), pt(468, 420), pt(518, 470), pt(468, 516)],
-                               closed: true, steps: 12)
-    sculpt(p, irisFar, base: Wash(r: 0.784, g: 0.588, b: 0.161), light: light,
-           hotAt: 0.62, seed: 5505, bands: 30, grain: false, falloff: 2.2,
-           ceiling: 0.74, rim: false)
-    p.shape(lump(cx: 470, cy: 470, rx: 16, ry: 17, rough: 0.04, steps: 20, seed: 5507),
-            Wash(r: 0.020, g: 0.016, b: 0.012))
-
-    let beak: [CGPoint] = curveThrough([pt(322, 520), pt(372, 540), pt(384, 596),
-                                        pt(354, 664), pt(330, 622), pt(312, 566)],
-                                       closed: true, steps: 12)
-    sculpt(p, beak, base: Wash(r: 0.216, g: 0.204, b: 0.204), light: light,
-           hotAt: 0.90, seed: 5601, bands: 44, grain: false, falloff: 3.0, ceiling: 0.66)
-    pen(p, curveThrough([pt(326, 528), pt(360, 560), pt(352, 640)], closed: false, steps: 9),
-        weight: 4.6, colour: moonBeam.al(0.46), wobble: 0.3, taper: true, seed: 5603)
 
     var bibr = Spark(5701)
-    let bibCentre = pt(330, 800)
-    p.inside(pathOf(bird)) {
+    p.inside(birdPath) {
         for _ in 0..<2200 {
-            let a = bibr.r(0, 6.283)
-            let rad = bibr.r(0, 1.0)
-            let x = Double(bibCentre.x) + cos(a) * rad * 138
-            let y = Double(bibCentre.y) + sin(a) * rad * 82
-            let fade = max(0.0, 1.0 - rad * rad)
-            let dir = bibr.r(0.85, 2.30)
-            let len = bibr.r(16, 52)
+            let a = bibr.r(0, 6.283185)
+            let rad = pow(bibr.d(), 0.58)
+            let x = 424.0 + cos(a) * rad * 158
+            let y = 854.0 + sin(a) * rad * 56
+            let fade = max(0.0, 1.0 - rad * rad * rad)
+            let dir = bibr.r(0.42, 2.72)
+            let len = bibr.r(16, 50)
+            let warm = (x - 424) * cos(light) + (y - 854) * sin(light)
+            let bright = bibr.odds(0.58 + (warm > 0 ? 0.28 : -0.20))
             pen(p, [pt(x, y), pt(x + cos(dir) * len, y + sin(dir) * len)],
-                weight: bibr.r(1.2, 3.6),
-                colour: (bibr.odds(0.72) ? Wash(r: 0.831, g: 0.839, b: 0.808)
-                         : Wash(r: 0.243, g: 0.227, b: 0.204)).al(bibr.r(0.12, 0.58) * fade),
+                weight: bibr.r(1.2, 3.8),
+                colour: (bright ? Wash(r: 0.859, g: 0.827, b: 0.749)
+                         : Wash(r: 0.180, g: 0.153, b: 0.125)).al(bibr.r(0.10, 0.40) * fade),
                 wobble: 0.6, taper: true, seed: bibr.next())
         }
     }
 
-    var bar = Spark(6001)
-    p.inside(pathOf(bird)) {
-        for k in 0..<20 {
-            let y = 848.0 + Double(k) * 30.0
-            let sweep = curveThrough([pt(120 + bar.r(-40, 40), y),
-                                      pt(420, y + bar.r(14, 44)),
-                                      pt(720, y + bar.r(30, 74)),
-                                      pt(1040, y + bar.r(50, 104))], closed: false, steps: 9)
-            penBroken(p, sweep, weight: bar.r(6.0, 12.0),
-                      colour: pitch.al(bar.r(0.30, 0.60)), pieces: 3, gap: 0.09,
-                      wobble: 1.8, seed: 6100 &+ UInt64(k))
-            penBroken(p, sweep.map { pt(Double($0.x) - 8, Double($0.y) - 10) },
-                      weight: bar.r(2.4, 5.2), colour: moonBeam.al(bar.r(0.10, 0.26)),
-                      pieces: 3, gap: 0.11, wobble: 1.4, seed: 6200 &+ UInt64(k))
+    p.inside(birdPath) {
+        p.inside(pathOf(underHead)) {
+            var wide: [CGPoint] = []
+            for k in 0..<7 {
+                let step = 168.0 - Double(k) * 20.0
+                let cast = headCurve.map { pt(Double($0.x) + step * 0.78,
+                                              Double($0.y) + step * 0.86) }
+                p.shape(cast, Wash(r: 0.004, g: 0.008, b: 0.018).al(0.13))
+                if k == 3 { wide = cast }
+            }
+            crossHatch(p, pathOf(wide), depth: 1, spacing: 15.0,
+                       colour: pitch.al(0.09), bound: birdPath, seed: 6701)
+        }
+    }
+
+    p.inside(birdPath) {
+        formPass(p, headCurve, light: light, inset: 292, shade: pitch,
+                 glow: Wash(r: 0.855, g: 0.902, b: 0.988), seed: 5051)
+        softGlow(p, cx: 262, cy: 388, radius: 340,
+                 colour: Wash(r: 0.976, g: 0.886, b: 0.706), strength: 0.38)
+        softGlow(p, cx: 358, cy: 528, radius: 300,
+                 colour: Wash(r: 0.965, g: 0.867, b: 0.694), strength: 0.24)
+        softGlow(p, cx: 748, cy: 566, radius: 420,
+                 colour: Wash(r: 0.004, g: 0.008, b: 0.020), strength: 0.44)
+        softGlow(p, cx: 800, cy: -80, radius: 460,
+                 colour: Wash(r: 0.006, g: 0.010, b: 0.024), strength: 0.46)
+        softGlow(p, cx: 726, cy: 356, radius: 470,
+                 colour: Wash(r: 0.271, g: 0.271, b: 0.302), strength: 0.24)
+        softGlow(p, cx: 774, cy: 30, radius: 340,
+                 colour: Wash(r: 0.271, g: 0.290, b: 0.353), strength: 0.26)
+        softGlow(p, cx: 464, cy: 228, radius: 360,
+                 colour: Wash(r: 0.016, g: 0.020, b: 0.039), strength: 0.40)
+        softGlow(p, cx: 210, cy: 96, radius: 360,
+                 colour: Wash(r: 0.020, g: 0.024, b: 0.043), strength: 0.44)
+        softGlow(p, cx: 760, cy: 40, radius: 300,
+                 colour: Wash(r: 0.020, g: 0.024, b: 0.043), strength: 0.30)
+    }
+
+    p.inside(birdPath) {
+        featherFan(p, cx: 412, cy: 496, rx: 336, ry: 306, count: 3000,
+                   lengthMin: 20, lengthMax: 64, light: light,
+                   dark: Wash(r: 0.125, g: 0.090, b: 0.063),
+                   pale: Wash(r: 0.965, g: 0.863, b: 0.647), seed: 5321)
+        featherFan(p, cx: 412, cy: 496, rx: 216, ry: 200, count: 1000,
+                   lengthMin: 14, lengthMax: 42, light: light,
+                   dark: Wash(r: 0.153, g: 0.110, b: 0.078),
+                   pale: Wash(r: 0.988, g: 0.906, b: 0.714), seed: 5341)
+    }
+
+    var ruff = Spark(5351)
+    p.inside(birdPath) {
+        for k in 0..<4 {
+            let scaleR = 0.98 + Double(k) * 0.042
+            var arc: [CGPoint] = []
+            var a = 0.16
+            while a <= 3.00 {
+                arc.append(pt(412 + cos(a) * 332 * scaleR, 496 + sin(a) * 304 * scaleR))
+                a += 0.055
+            }
+            penBroken(p, arc, weight: ruff.r(5.0, 11.0),
+                      colour: pitch.al(ruff.r(0.22, 0.46)), pieces: 5, gap: 0.17,
+                      wobble: 2.6, seed: 5361 &+ UInt64(k))
+        }
+        var arcL: [CGPoint] = []
+        var a = 3.30
+        while a <= 4.34 {
+            arcL.append(pt(412 + cos(a) * 328, 496 + sin(a) * 300))
+            a += 0.05
+        }
+        penBroken(p, arcL, weight: 5.4, colour: moonBeam.al(0.24),
+                  pieces: 5, gap: 0.24, wobble: 2.0, seed: 5371)
+        var arcR: [CGPoint] = []
+        a = 4.90
+        while a <= 6.05 {
+            arcR.append(pt(412 + cos(a) * 330, 496 + sin(a) * 302))
+            a += 0.05
+        }
+        penBroken(p, arcR, weight: 6.4, colour: pitch.al(0.40),
+                  pieces: 5, gap: 0.20, wobble: 2.2, seed: 5373)
+    }
+
+    let browNear = curveThrough([pt(158, 412), pt(208, 332), pt(300, 312), pt(374, 368)],
+                                closed: false, steps: 11)
+    engrave(p, browNear, weight: 7.4, light: light, seed: 5311, glow: 0.32)
+    let browFar = curveThrough([pt(450, 384), pt(510, 328), pt(594, 332), pt(654, 402)],
+                               closed: false, steps: 11)
+    engrave(p, browFar, weight: 5.6, light: light, seed: 5313, glow: 0.07)
+
+    var vee = Spark(5381)
+    for _ in 0..<130 {
+        let t = vee.d()
+        let x = 424.0 + vee.r(-30, 30)
+        let y = 362.0 + t * 156
+        let dir = 1.57 + vee.r(-0.34, 0.34)
+        let len = vee.r(22, 54)
+        pen(p, [pt(x, y), pt(x + cos(dir) * len * 0.4, y + sin(dir) * len)],
+            weight: vee.r(1.0, 2.8),
+            colour: (vee.odds(0.48) ? Wash(r: 0.882, g: 0.839, b: 0.769)
+                     : Wash(r: 0.157, g: 0.122, b: 0.094)).al(vee.r(0.08, 0.26)),
+            wobble: 0.4, taper: true, seed: vee.next())
+    }
+
+    let bill: [CGPoint] = curveThrough([pt(406, 524), pt(448, 536), pt(462, 574),
+                                        pt(440, 634), pt(414, 650), pt(408, 602),
+                                        pt(392, 558)],
+                                       closed: true, steps: 12)
+    sculpt(p, bill, base: Wash(r: 0.137, g: 0.125, b: 0.118), light: light,
+           hotAt: 0.90, seed: 5601, bands: 46, grain: false, falloff: 2.9,
+           ceiling: 0.44, floorLevel: 0.02)
+    pen(p, curveThrough([pt(410, 532), pt(436, 562), pt(428, 628)], closed: false, steps: 9),
+        weight: 2.2, colour: warmLit.al(0.20), wobble: 0.3, taper: true, seed: 5603)
+    penBroken(p, curveThrough([pt(456, 582), pt(444, 626), pt(418, 648)],
+                              closed: false, steps: 9),
+              weight: 5.0, colour: pitch.al(0.66), pieces: 3, gap: 0.06,
+              wobble: 0.5, seed: 5605)
+
+    owlEye(p, cx: 278, cy: 452, rad: 88, light: light, value: 1.0,
+           gaze: -26.0, jitter: 9101)
+    owlEye(p, cx: 552, cy: 468, rad: 88, light: light, value: 0.46,
+           gaze: -26.0, jitter: 9201)
+
+    var chin = Spark(5391)
+    p.inside(birdPath) {
+        for _ in 0..<620 {
+            let a = chin.r(0, 6.283185)
+            let t = pow(chin.d(), 0.55)
+            let x = 434.0 + cos(a) * t * 142
+            let y = 704.0 + sin(a) * t * 78
+            let fade = max(0.0, 1.0 - t * t)
+            let dir = chin.r(1.05, 2.10)
+            let len = chin.r(18, 54)
+            pen(p, [pt(x, y), pt(x + cos(dir) * len * 0.5, y + sin(dir) * len)],
+                weight: chin.r(1.4, 3.6),
+                colour: pitch.al(chin.r(0.14, 0.40) * fade),
+                wobble: 0.7, taper: true, seed: chin.next())
         }
     }
 
     var tuft = Spark(6301)
-    for _ in 0..<760 {
+    for _ in 0..<1500 {
         let side = tuft.odds(0.5)
-        let bx = side ? tuft.r(-110, 170) : tuft.r(490, 720)
-        let by = tuft.r(-60, 230)
-        let dir = side ? tuft.r(0.86, 1.62) : tuft.r(1.52, 2.32)
-        let len = tuft.r(26, 96)
-        let bend = tuft.r(-0.34, 0.34)
+        let by = tuft.r(-244, 268)
+        let t = max(0.0, min(1.0, (by + 240) / 510))
+        let bx = side ? tuft.r(-60 + t * 256, 110 + t * 290)
+                      : tuft.r(800 - t * 244, 960 - t * 260)
+        let dir = side ? tuft.r(0.88, 1.18) : tuft.r(1.96, 2.26)
+        let len = tuft.r(40, 158)
+        let bend = tuft.r(-0.32, 0.32)
+        let bright = side ? tuft.odds(0.48) : tuft.odds(0.34)
         pen(p, [pt(bx, by),
                 pt(bx - cos(dir + bend * 0.4) * len * 0.34, by - sin(dir + bend * 0.4) * len * 0.55),
-                pt(bx - cos(dir + bend) * len * 0.60, by - sin(dir + bend) * len)],
-            weight: tuft.r(1.2, 3.6),
-            colour: (tuft.odds(0.38) ? Wash(r: 0.831, g: 0.871, b: 0.941).al(tuft.r(0.06, 0.24))
-                     : pitch.al(tuft.r(0.20, 0.54))),
+                pt(bx - cos(dir + bend) * len * 0.58, by - sin(dir + bend) * len)],
+            weight: tuft.r(1.3, 3.8),
+            colour: (bright
+                     ? (side ? Wash(r: 0.925, g: 0.878, b: 0.784).al(tuft.r(0.10, 0.34))
+                        : Wash(r: 0.427, g: 0.451, b: 0.518).al(tuft.r(0.08, 0.24)))
+                     : pitch.al(tuft.r(0.22, 0.60))),
             wobble: 0.9, taper: true, seed: tuft.next())
     }
 
-    for run in rimRuns(bird, light: light, threshold: 0.52) {
-        penBroken(p, run, weight: 9.0, colour: Wash(r: 0.859, g: 0.906, b: 0.984).al(0.68),
-                  pieces: 3, gap: 0.05, wobble: 0.9, seed: 6401)
+    for run in rimRuns(bird, light: light, threshold: 0.56) {
+        penBroken(p, run, weight: 7.4, colour: Wash(r: 0.898, g: 0.933, b: 1.0).al(0.72),
+                  pieces: 3, gap: 0.07, wobble: 1.0, seed: 6401)
+        penBroken(p, run.map { pt(Double($0.x) + 8, Double($0.y) + 9) }, weight: 3.6,
+                  colour: Wash(r: 0.965, g: 0.933, b: 0.855).al(0.26),
+                  pieces: 4, gap: 0.13, wobble: 0.7, seed: 6411)
     }
-    for run in rimRuns(bird, light: light + .pi, threshold: 0.34) {
-        penBroken(p, run, weight: 3.8, colour: Wash(r: 0.431, g: 0.510, b: 0.667).al(0.30),
-                  pieces: 4, gap: 0.16, wobble: 1.0, seed: 6402)
-    }
-    for run in rimRuns(facialDisc, light: light, threshold: 0.36) {
-        penBroken(p, run, weight: 4.6, colour: Wash(r: 0.878, g: 0.918, b: 0.976).al(0.38),
-                  pieces: 4, gap: 0.10, wobble: 0.7, seed: 6403)
+    for run in rimRuns(bird, light: light + .pi, threshold: 0.20) {
+        penBroken(p, run, weight: 6.0, colour: Wash(r: 0.494, g: 0.573, b: 0.729).al(0.56),
+                  pieces: 4, gap: 0.15, wobble: 1.2, seed: 6402)
     }
 
     if let g = CGGradient(colorsSpace: rgbSpace,
-                          colors: [cg(Wash(r: 0.729, g: 0.827, b: 1.0).al(0.17)),
+                          colors: [cg(Wash(r: 0.741, g: 0.839, b: 1.0).al(0.16)),
                                    cg(Wash(r: 0.6, g: 0.7, b: 1.0).al(0))] as CFArray,
                           locations: [0, 1]) {
-        p.ctx.drawRadialGradient(g, startCenter: CGPoint(x: 168, y: 156), startRadius: 0,
-                                 endCenter: CGPoint(x: 168, y: 156), endRadius: 560, options: [])
+        p.ctx.drawRadialGradient(g, startCenter: CGPoint(x: 108, y: 84), startRadius: 0,
+                                 endCenter: CGPoint(x: 108, y: 84), endRadius: 620, options: [])
     }
 
     if let g = CGGradient(colorsSpace: rgbSpace,
                           colors: [cg(Wash(r: 0, g: 0, b: 0, a: 0)),
-                                   cg(Wash(r: 0, g: 0, b: 0.008, a: 0.58))] as CFArray,
-                          locations: [0.42, 1]) {
-        p.ctx.drawRadialGradient(g, startCenter: CGPoint(x: 380, y: 400), startRadius: 0,
-                                 endCenter: CGPoint(x: 380, y: 400), endRadius: 900,
+                                   cg(Wash(r: 0, g: 0, b: 0.008, a: 0.46))] as CFArray,
+                          locations: [0.40, 1]) {
+        p.ctx.drawRadialGradient(g, startCenter: CGPoint(x: 340, y: 372), startRadius: 0,
+                                 endCenter: CGPoint(x: 340, y: 372), endRadius: 940,
                                  options: [.drawsAfterEndLocation])
     }
-    _ = rng.next()
+
     p.emitPNG(dir, "AppIcon-1024")
     sheetScale = held
 }
