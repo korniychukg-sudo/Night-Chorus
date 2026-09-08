@@ -1,0 +1,389 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		NCB0000000000000003001 /* CabinetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001001 /* CabinetView.swift */; };
+		NCB0000000000000003002 /* CallTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001002 /* CallTrace.swift */; };
+		NCB0000000000000003003 /* ChorusCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001003 /* ChorusCanvas.swift */; };
+		NCB0000000000000003004 /* ChorusEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001004 /* ChorusEngine.swift */; };
+		NCB0000000000000003005 /* ChorusIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001005 /* ChorusIcons.swift */; };
+		NCB0000000000000003006 /* ChorusParts.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001006 /* ChorusParts.swift */; };
+		NCB0000000000000003007 /* ChorusScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001007 /* ChorusScene.swift */; };
+		NCB0000000000000003008 /* ChorusStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001008 /* ChorusStore.swift */; };
+		NCB0000000000000003030 /* NightClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001030 /* NightClock.swift */; };
+		NCB0000000000000003009 /* ChorusTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001009 /* ChorusTheme.swift */; };
+		NCB0000000000000003010 /* IsolateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001010 /* IsolateSheet.swift */; };
+		NCB0000000000000003011 /* ListenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001011 /* ListenView.swift */; };
+		NCB0000000000000003012 /* NightChorusApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001012 /* NightChorusApp.swift */; };
+		NCB0000000000000003013 /* NightPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001013 /* NightPlan.swift */; };
+		NCB0000000000000003014 /* NightRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001014 /* NightRoot.swift */; };
+		NCB0000000000000003015 /* PrimerTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001015 /* PrimerTools.swift */; };
+		NCB0000000000000003016 /* PrimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001016 /* PrimerView.swift */; };
+		NCB0000000000000003017 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001017 /* RegisterView.swift */; };
+		NCB0000000000000003018 /* TonightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001018 /* TonightView.swift */; };
+		NCB0000000000000003019 /* VoiceBlocksA.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001019 /* VoiceBlocksA.swift */; };
+		NCB0000000000000003020 /* VoiceBlocksB.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001020 /* VoiceBlocksB.swift */; };
+		NCB0000000000000003021 /* VoiceRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000001021 /* VoiceRegistry.swift */; };
+		NCB0000000000000004001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000002001 /* Assets.xcassets */; };
+		NCB0000000000000004002 /* Art in Resources */ = {isa = PBXBuildFile; fileRef = NCA0000000000000002002 /* Art */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		NCA0000000000000001001 /* CabinetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CabinetView.swift; sourceTree = "<group>"; };
+		NCA0000000000000001002 /* CallTrace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallTrace.swift; sourceTree = "<group>"; };
+		NCA0000000000000001003 /* ChorusCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorusCanvas.swift; sourceTree = "<group>"; };
+		NCA0000000000000001004 /* ChorusEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorusEngine.swift; sourceTree = "<group>"; };
+		NCA0000000000000001005 /* ChorusIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorusIcons.swift; sourceTree = "<group>"; };
+		NCA0000000000000001006 /* ChorusParts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorusParts.swift; sourceTree = "<group>"; };
+		NCA0000000000000001007 /* ChorusScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorusScene.swift; sourceTree = "<group>"; };
+		NCA0000000000000001008 /* ChorusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorusStore.swift; sourceTree = "<group>"; };
+		NCA0000000000000001030 /* NightClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightClock.swift; sourceTree = "<group>"; };
+		NCA0000000000000001009 /* ChorusTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChorusTheme.swift; sourceTree = "<group>"; };
+		NCA0000000000000001010 /* IsolateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolateSheet.swift; sourceTree = "<group>"; };
+		NCA0000000000000001011 /* ListenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListenView.swift; sourceTree = "<group>"; };
+		NCA0000000000000001012 /* NightChorusApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightChorusApp.swift; sourceTree = "<group>"; };
+		NCA0000000000000001013 /* NightPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightPlan.swift; sourceTree = "<group>"; };
+		NCA0000000000000001014 /* NightRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightRoot.swift; sourceTree = "<group>"; };
+		NCA0000000000000001015 /* PrimerTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimerTools.swift; sourceTree = "<group>"; };
+		NCA0000000000000001016 /* PrimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimerView.swift; sourceTree = "<group>"; };
+		NCA0000000000000001017 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
+		NCA0000000000000001018 /* TonightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TonightView.swift; sourceTree = "<group>"; };
+		NCA0000000000000001019 /* VoiceBlocksA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceBlocksA.swift; sourceTree = "<group>"; };
+		NCA0000000000000001020 /* VoiceBlocksB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceBlocksB.swift; sourceTree = "<group>"; };
+		NCA0000000000000001021 /* VoiceRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRegistry.swift; sourceTree = "<group>"; };
+		NCA0000000000000002001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		NCA0000000000000002002 /* Art */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Art; sourceTree = "<group>"; };
+		NCA0000000000000002090 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		NCA0000000000000002099 /* Night Chorus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Night Chorus.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		NCC0000000000000005001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		NCD0000000000000006001 = {
+			isa = PBXGroup;
+			children = (
+				NCD0000000000000006002 /* Night Chorus */,
+				NCD0000000000000006003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		NCD0000000000000006002 /* Night Chorus */ = {
+			isa = PBXGroup;
+			children = (
+				NCA0000000000000001001 /* CabinetView.swift */,
+				NCA0000000000000001002 /* CallTrace.swift */,
+				NCA0000000000000001003 /* ChorusCanvas.swift */,
+				NCA0000000000000001004 /* ChorusEngine.swift */,
+				NCA0000000000000001005 /* ChorusIcons.swift */,
+				NCA0000000000000001006 /* ChorusParts.swift */,
+				NCA0000000000000001007 /* ChorusScene.swift */,
+				NCA0000000000000001008 /* ChorusStore.swift */,
+				NCA0000000000000001030 /* NightClock.swift */,
+				NCA0000000000000001009 /* ChorusTheme.swift */,
+				NCA0000000000000001010 /* IsolateSheet.swift */,
+				NCA0000000000000001011 /* ListenView.swift */,
+				NCA0000000000000001012 /* NightChorusApp.swift */,
+				NCA0000000000000001013 /* NightPlan.swift */,
+				NCA0000000000000001014 /* NightRoot.swift */,
+				NCA0000000000000001015 /* PrimerTools.swift */,
+				NCA0000000000000001016 /* PrimerView.swift */,
+				NCA0000000000000001017 /* RegisterView.swift */,
+				NCA0000000000000001018 /* TonightView.swift */,
+				NCA0000000000000001019 /* VoiceBlocksA.swift */,
+				NCA0000000000000001020 /* VoiceBlocksB.swift */,
+				NCA0000000000000001021 /* VoiceRegistry.swift */,
+				NCA0000000000000002001 /* Assets.xcassets */,
+				NCA0000000000000002002 /* Art */,
+				NCA0000000000000002090 /* Info.plist */,
+			);
+			path = "Night Chorus";
+			sourceTree = "<group>";
+		};
+		NCD0000000000000006003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				NCA0000000000000002099 /* Night Chorus.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		NCE0000000000000007001 /* Night Chorus */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = NCF0000000000000008001 /* Build configuration list for PBXNativeTarget "Night Chorus" */;
+			buildPhases = (
+				NCG0000000000000009001 /* Sources */,
+				NCC0000000000000005001 /* Frameworks */,
+				NCG0000000000000009002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Night Chorus";
+			productName = "Night Chorus";
+			productReference = NCA0000000000000002099 /* Night Chorus.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		NCG0000000000000009501 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					NCE0000000000000007001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = NCF0000000000000008002 /* Build configuration list for PBXProject "Night Chorus" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = NCD0000000000000006001;
+			productRefGroup = NCD0000000000000006003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				NCE0000000000000007001 /* Night Chorus */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		NCG0000000000000009002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				NCB0000000000000004001 /* Assets.xcassets in Resources */,
+				NCB0000000000000004002 /* Art in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		NCG0000000000000009001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				NCB0000000000000003001 /* CabinetView.swift in Sources */,
+				NCB0000000000000003002 /* CallTrace.swift in Sources */,
+				NCB0000000000000003003 /* ChorusCanvas.swift in Sources */,
+				NCB0000000000000003004 /* ChorusEngine.swift in Sources */,
+				NCB0000000000000003005 /* ChorusIcons.swift in Sources */,
+				NCB0000000000000003006 /* ChorusParts.swift in Sources */,
+				NCB0000000000000003007 /* ChorusScene.swift in Sources */,
+				NCB0000000000000003008 /* ChorusStore.swift in Sources */,
+				NCB0000000000000003030 /* NightClock.swift in Sources */,
+				NCB0000000000000003009 /* ChorusTheme.swift in Sources */,
+				NCB0000000000000003010 /* IsolateSheet.swift in Sources */,
+				NCB0000000000000003011 /* ListenView.swift in Sources */,
+				NCB0000000000000003012 /* NightChorusApp.swift in Sources */,
+				NCB0000000000000003013 /* NightPlan.swift in Sources */,
+				NCB0000000000000003014 /* NightRoot.swift in Sources */,
+				NCB0000000000000003015 /* PrimerTools.swift in Sources */,
+				NCB0000000000000003016 /* PrimerView.swift in Sources */,
+				NCB0000000000000003017 /* RegisterView.swift in Sources */,
+				NCB0000000000000003018 /* TonightView.swift in Sources */,
+				NCB0000000000000003019 /* VoiceBlocksA.swift in Sources */,
+				NCB0000000000000003020 /* VoiceBlocksB.swift in Sources */,
+				NCB0000000000000003021 /* VoiceRegistry.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		NCF0000000000000008101 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		NCF0000000000000008102 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		NCF0000000000000008103 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Night Chorus/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nightchorusfield.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		NCF0000000000000008104 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Night Chorus/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nightchorusfield.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		NCF0000000000000008001 /* Build configuration list for PBXNativeTarget "Night Chorus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				NCF0000000000000008103 /* Debug */,
+				NCF0000000000000008104 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		NCF0000000000000008002 /* Build configuration list for PBXProject "Night Chorus" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				NCF0000000000000008101 /* Debug */,
+				NCF0000000000000008102 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = NCG0000000000000009501 /* Project object */;
+}
