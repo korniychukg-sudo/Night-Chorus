@@ -73,6 +73,186 @@ func rimRuns(_ pts: [CGPoint], light: Double, threshold: Double = 0.14) -> [[CGP
     return spans.filter { $0.count > 1 }.map { span in span.map { pts[$0] } }
 }
 
+struct Graze {
+    let pts: [CGPoint]
+    let power: [Double]
+}
+
+func grazeFall(_ v: Double, _ gate: Double) -> Double {
+    let clamped = max(0.0, min(1.0, v))
+    guard gate > 0, gate < 0.999 else { return clamped }
+    let t = max(0.0, min(1.0, (clamped - gate) / (1.0 - gate)))
+    return t * t * (3.0 - 2.0 * t)
+}
+
+func grazeRuns(_ pts: [CGPoint], light: Double, enter: Double, leave: Double,
+               window: Int = 11, bridge: Int = 14, minRun: Int = 16,
+               inset: Double = 0, gate: Double = 0) -> [Graze] {
+    let n = pts.count
+    guard n > 8 else { return [] }
+    var twice = 0.0
+    for i in 0..<n {
+        let a = pts[i], b = pts[(i + 1) % n]
+        twice += Double(a.x) * Double(b.y) - Double(b.x) * Double(a.y)
+    }
+    let turn: Double = twice > 0 ? -(.pi / 2) : (.pi / 2)
+    let reach = max(1, min(n / 8, 4))
+    var nx = [Double](repeating: 0, count: n)
+    var ny = [Double](repeating: 0, count: n)
+    var raw = [Double](repeating: 0, count: n)
+    var carry = 0.0
+    for i in 0..<n {
+        let a = pts[(i + n - reach) % n], b = pts[(i + reach) % n]
+        let dx = Double(b.x - a.x), dy = Double(b.y - a.y)
+        if dx * dx + dy * dy > 1e-9 { carry = atan2(dy, dx) }
+        let na = carry + turn
+        nx[i] = cos(na)
+        ny[i] = sin(na)
+        raw[i] = cos(na - light)
+    }
+    var facing = [Double](repeating: 0, count: n)
+    let half = max(1, min(window / 2, n / 3))
+    for i in 0..<n {
+        var acc = 0.0, mass = 0.0
+        for k in -half...half {
+            let w = 1.0 - Double(abs(k)) / Double(half + 1)
+            acc += raw[(i + k + n) % n] * w
+            mass += w
+        }
+        facing[i] = acc / mass
+    }
+    var seedIdx = 0
+    var peak = facing[0]
+    for i in 1..<n {
+        if facing[i] < facing[seedIdx] { seedIdx = i }
+        if facing[i] > peak { peak = facing[i] }
+    }
+    var lit = [Bool](repeating: false, count: n)
+    var on = facing[seedIdx] > enter
+    for k in 0..<n {
+        let i = (seedIdx + k) % n
+        if on {
+            if facing[i] < leave { on = false }
+        } else if facing[i] > enter {
+            on = true
+        }
+        lit[i] = on
+    }
+    guard lit.contains(true) else { return [] }
+    if lit.contains(false) {
+        var fill: [Int] = []
+        for i in 0..<n where !lit[i] && lit[(i + n - 1) % n] {
+            var len = 0
+            while len < n && !lit[(i + len) % n] { len += 1 }
+            if len <= bridge { for k in 0..<len { fill.append((i + k) % n) } }
+        }
+        for i in fill { lit[i] = true }
+    }
+    var runs: [(Int, Int)] = []
+    if lit.contains(false) {
+        for i in 0..<n where lit[i] && !lit[(i + n - 1) % n] {
+            var len = 0
+            while len < n && lit[(i + len) % n] { len += 1 }
+            runs.append((i, len))
+        }
+    } else {
+        runs = [(0, n)]
+    }
+    let spread = max(0.14, peak - leave)
+    var out: [Graze] = []
+    for (start, len) in runs where len >= minRun {
+        var line: [CGPoint] = []
+        var lift: [Double] = []
+        line.reserveCapacity(len)
+        lift.reserveCapacity(len)
+        for k in 0..<len {
+            let i = (start + k) % n
+            let lam = grazeFall((facing[i] - leave) / spread, gate)
+            line.append(pt(Double(pts[i].x) - nx[i] * inset * lam,
+                           Double(pts[i].y) - ny[i] * inset * lam))
+            lift.append(lam)
+        }
+        out.append(Graze(pts: line, power: lift))
+    }
+    return out
+}
+
+func grazeLine(_ pts: [CGPoint]) -> Graze {
+    Graze(pts: pts, power: [Double](repeating: 1.0, count: pts.count))
+}
+
+func grazeCore(_ g: Graze, _ keep: Double) -> Graze {
+    guard g.pts.count > 6, keep > 0, keep < 1 else { return g }
+    let drop = min(Int(Double(g.pts.count) * (1.0 - keep) * 0.5), g.pts.count / 2 - 2)
+    let lo = max(0, drop)
+    let hi = g.pts.count - 1 - lo
+    guard hi > lo + 1 else { return g }
+    return Graze(pts: Array(g.pts[lo...hi]), power: Array(g.power[lo...hi]))
+}
+
+func grazeResample(_ g: Graze, count: Int) -> Graze {
+    guard g.pts.count > 1, count > 1 else { return g }
+    var marks: [Double] = [0]
+    var total = 0.0
+    for i in 1..<g.pts.count {
+        let dx = Double(g.pts[i].x - g.pts[i - 1].x), dy = Double(g.pts[i].y - g.pts[i - 1].y)
+        total += (dx * dx + dy * dy).squareRoot()
+        marks.append(total)
+    }
+    guard total > 0 else { return g }
+    var line: [CGPoint] = []
+    var lift: [Double] = []
+    var seg = 1
+    for k in 0..<count {
+        let target = total * Double(k) / Double(count - 1)
+        while seg < marks.count - 1 && marks[seg] < target { seg += 1 }
+        let l0 = marks[seg - 1], l1 = marks[seg]
+        let t = l1 > l0 ? (target - l0) / (l1 - l0) : 0
+        let a = g.pts[seg - 1], b = g.pts[seg]
+        line.append(CGPoint(x: a.x + (b.x - a.x) * CGFloat(t),
+                            y: a.y + (b.y - a.y) * CGFloat(t)))
+        lift.append(g.power[seg - 1] + (g.power[seg] - g.power[seg - 1]) * t)
+    }
+    return Graze(pts: line, power: lift)
+}
+
+func graze(_ p: Sheet, _ g: Graze, weight: Double, colour: Wash, sharp: Double = 1.0,
+           wobble: Double = 0.0, seed: UInt64 = 9) {
+    guard g.pts.count > 1, weight > 0 else { return }
+    var total = 0.0
+    for i in 1..<g.pts.count {
+        let dx = Double(g.pts[i].x - g.pts[i - 1].x), dy = Double(g.pts[i].y - g.pts[i - 1].y)
+        total += (dx * dx + dy * dy).squareRoot()
+    }
+    guard total > 3 else { return }
+    let n = max(28, min(420, Int(total / 3.0)))
+    let s = grazeResample(g, count: n)
+    var rng = Spark(seed)
+    let f1 = rng.r(1.4, 3.0), f2 = rng.r(4.0, 7.4)
+    let ph1 = rng.r(0, 6.283185), ph2 = rng.r(0, 6.283185)
+    var left: [CGPoint] = []
+    var right: [CGPoint] = []
+    for i in 0..<n {
+        let t = Double(i) / Double(n - 1)
+        let a = s.pts[max(0, i - 1)], b = s.pts[min(n - 1, i + 1)]
+        var tx = Double(b.x - a.x), ty = Double(b.y - a.y)
+        let len = (tx * tx + ty * ty).squareRoot()
+        if len > 0 { tx /= len; ty /= len } else { tx = 1; ty = 0 }
+        let px = -ty, py = tx
+        let ends = pow(sin(.pi * t), 0.42)
+        let lam = pow(max(0.0, min(1.0, s.power[i])), sharp)
+        let ripple = 1.0 + 0.13 * sin(t * f1 * 6.283185 + ph1)
+                         + 0.06 * sin(t * f2 * 6.283185 + ph2)
+        let hw = max(0.0, weight * 0.5 * ends * lam * ripple)
+        let off = sin(t * f2 * 3.141593 + ph2) * wobble
+        let cx = Double(s.pts[i].x) + px * off
+        let cy = Double(s.pts[i].y) + py * off
+        left.append(pt(cx + px * hw, cy + py * hw))
+        right.append(pt(cx - px * hw, cy - py * hw))
+    }
+    p.shape(left + right.reversed(), colour)
+}
+
 func sculpt(_ p: Sheet, _ outline: [CGPoint], base: Wash, light: Double,
             hotAt: Double, seed: UInt64, bands: Int = 74, grain: Bool = true,
             grainCount: Int = 0, grainLen: Double = 34, grainWeight: Double = 2.6,
@@ -600,9 +780,14 @@ func buildIcon(dir: String) {
            grainWeight: 1.8, falloff: 3.1, ceiling: 0.52, floorLevel: 0.02, rim: false)
     padSheen(p, cx: 918, cy: 796, spread: 30, spec: hindSpec, light: light,
              value: 0.72, seed: 4511)
-    for run in rimRuns(hindFoot, light: light, threshold: 0.38) {
-        penBroken(p, run, weight: 5.0, colour: moonBeam.al(0.34), pieces: 4,
-                  gap: 0.13, wobble: 0.9, seed: 4521)
+    p.inside(pathOf(hindFoot)) {
+        for run in grazeRuns(hindFoot, light: light, enter: 0.36, leave: 0.08,
+                             window: 5, bridge: 5, minRun: 5, inset: 2.2,
+                             gate: 0.22) {
+            graze(p, run, weight: 6.8, colour: moonBeam.al(0.22), sharp: 0.55,
+                  wobble: 0.3, seed: 4521)
+            graze(p, run, weight: 3.6, colour: moonBeam.al(0.50), sharp: 1.40, seed: 4525)
+        }
     }
 
     let farSpec: [(Double, Double, Double, Double)] = [
@@ -616,9 +801,14 @@ func buildIcon(dir: String) {
            grainWeight: 1.8, falloff: 3.0, ceiling: 0.40, floorLevel: 0.02, rim: false)
     padSheen(p, cx: 204, cy: 838, spread: 26, spec: farSpec, light: light,
              value: 0.34, seed: 4411)
-    for run in rimRuns(farHand, light: light, threshold: 0.40) {
-        penBroken(p, run, weight: 4.4, colour: moonBeam.al(0.26), pieces: 4,
-                  gap: 0.14, wobble: 0.9, seed: 4421)
+    p.inside(pathOf(farHand)) {
+        for run in grazeRuns(farHand, light: light, enter: 0.38, leave: 0.10,
+                             window: 5, bridge: 5, minRun: 5, inset: 1.8,
+                             gate: 0.22) {
+            graze(p, run, weight: 5.4, colour: moonBeam.al(0.17), sharp: 0.55,
+                  wobble: 0.3, seed: 4421)
+            graze(p, run, weight: 3.2, colour: moonBeam.al(0.36), sharp: 1.40, seed: 4425)
+        }
     }
 
     let skin = Wash(r: 0.404, g: 0.443, b: 0.361)
@@ -707,6 +897,7 @@ func buildIcon(dir: String) {
     }
 
     var backWet = Spark(5501)
+    var wetTrim = Spark(5507)
     p.inside(frogPath) {
         for k in 0..<13 {
             let off = Double(k) * 14.0
@@ -717,9 +908,10 @@ func buildIcon(dir: String) {
                                        pt(760 + off * 0.4, 272 + off),
                                        pt(852 + off * 0.4, 300 + off)],
                                       closed: false, steps: 9)
-            penBroken(p, streak, weight: backWet.r(3.0, 9.0),
-                      colour: moonBeam.al(backWet.r(0.07, 0.24)), pieces: 3,
-                      gap: 0.18, wobble: 1.3, seed: backWet.next())
+            graze(p, grazeCore(grazeLine(streak), wetTrim.r(0.42, 0.94)),
+                  weight: backWet.r(3.0, 9.0),
+                  colour: moonBeam.al(backWet.r(0.03, 0.09)), sharp: 1.0,
+                  wobble: 1.1, seed: backWet.next())
         }
         for k in 0..<5 {
             let off = Double(k) * 17.0
@@ -727,9 +919,10 @@ func buildIcon(dir: String) {
                                        pt(258 + off * 0.3, 366 + off),
                                        pt(322 + off * 0.3, 396 + off)],
                                       closed: false, steps: 9)
-            penBroken(p, streak, weight: backWet.r(2.4, 6.0),
-                      colour: moonBeam.al(backWet.r(0.06, 0.18)), pieces: 3,
-                      gap: 0.20, wobble: 1.1, seed: backWet.next())
+            graze(p, grazeCore(grazeLine(streak), wetTrim.r(0.44, 0.92)),
+                  weight: backWet.r(2.4, 6.0),
+                  colour: moonBeam.al(backWet.r(0.03, 0.08)), sharp: 1.0,
+                  wobble: 0.9, seed: backWet.next())
         }
     }
 
@@ -931,16 +1124,25 @@ func buildIcon(dir: String) {
 
     frogEye(p, cx: 300, cy: 296, rx: 88, ry: 82, light: light, seed: 9101)
 
-    for run in rimRuns(frog, light: light, threshold: 0.50) {
-        penBroken(p, run, weight: 7.8, colour: Wash(r: 0.914, g: 0.945, b: 1.0).al(0.74),
-                  pieces: 3, gap: 0.06, wobble: 1.0, seed: 7401)
-        penBroken(p, run.map { pt(Double($0.x) + 8, Double($0.y) + 9) }, weight: 3.6,
-                  colour: Wash(r: 0.957, g: 0.965, b: 0.906).al(0.26),
-                  pieces: 4, gap: 0.13, wobble: 0.8, seed: 7411)
-    }
-    for run in rimRuns(frog, light: light + .pi, threshold: 0.24) {
-        penBroken(p, run, weight: 6.2, colour: Wash(r: 0.400, g: 0.494, b: 0.643).al(0.50),
-                  pieces: 4, gap: 0.15, wobble: 1.2, seed: 7421)
+    p.inside(frogPath) {
+        for run in grazeRuns(frog, light: light, enter: 0.50, leave: 0.14,
+                             window: 13, bridge: 18, minRun: 18, inset: 3.6,
+                             gate: 0.58) {
+            graze(p, run, weight: 13.0, colour: Wash(r: 0.914, g: 0.945, b: 1.0).al(0.22),
+                  sharp: 0.55, wobble: 0.5, seed: 7401)
+            graze(p, run, weight: 7.6, colour: Wash(r: 0.914, g: 0.945, b: 1.0).al(0.52),
+                  sharp: 1.20, seed: 7405)
+            graze(p, run, weight: 4.0, colour: Wash(r: 0.957, g: 0.965, b: 0.906).al(0.80),
+                  sharp: 2.30, seed: 7411)
+        }
+        for run in grazeRuns(frog, light: light + .pi, enter: 0.26, leave: 0.04,
+                             window: 13, bridge: 18, minRun: 18, inset: 2.8,
+                             gate: 0.40) {
+            graze(p, run, weight: 9.0, colour: Wash(r: 0.400, g: 0.494, b: 0.643).al(0.26),
+                  sharp: 0.55, wobble: 0.6, seed: 7421)
+            graze(p, run, weight: 4.6, colour: Wash(r: 0.435, g: 0.529, b: 0.678).al(0.44),
+                  sharp: 1.40, seed: 7425)
+        }
     }
 
     if let g = CGGradient(colorsSpace: rgbSpace,
